@@ -1,0 +1,54 @@
+{
+  "name": "dsh-unlimited-effort",
+  "version": "0.1.0",
+  "description": "Composer infinity toggle: while the highest reasoning effort is selected, one click adds an unlimited-token-budget notice to the system prompt.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "plugin",
+    "reasoning-effort",
+    "system-prompt",
+    "composer"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lizilong1993/dsh-unlimited-effort.git"
+  },
+  "homepage": "https://github.com/lizilong1993/dsh-unlimited-effort",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src/",
+    "lib/",
+    "tools/",
+    "cordis.patch.yml",
+    "dsh.plugin.json",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "check": "node tools/check.mjs",
+    "test": "node --test \"tests/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.0-rc.1 <0.3.0-0"
+  }
+}

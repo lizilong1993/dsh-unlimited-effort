@@ -1,0 +1,7 @@
+# dsh-unlimited-effort bundle patch：一行装配进 profile。
+#
+# 宿主半（src/index.js）注册 system prompt 段落与 /unlimited-mode/state 路由；
+# 浏览器半（package.json 的 dsh.client）在输入框工具条注册 ∞ 选择键。
+- insert:
+    - id: unlimited-mode
+      name: dsh-unlimited-effort
