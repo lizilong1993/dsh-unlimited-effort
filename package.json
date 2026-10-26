@@ -32,8 +32,7 @@
     "dsh.plugin.json",
     "README.md",
     "README.en.md",
-    "LICENSE",
-    "assets/"
+    "LICENSE"
   ],
   "dsh": {
     "bundle": {
