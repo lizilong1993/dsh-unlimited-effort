@@ -1,5 +1,9 @@
 # dsh-unlimited-effort
 
+<p align="center">
+  <img src="assets/banner.jpg" alt="dsh-unlimited-effort — DeepSeek Harness 的 ∞ 无限推理提示插件" width="100%">
+</p>
+
 > DeepSeek Harness 插件：输入框里的 **∞** 开关。当会话选中最高推理档位时，它出现在模型选择器右侧；点一下，之后每个请求的系统提示词末尾都会多一句「用量无上限」。
 
 [English](README.en.md) · [安装](#安装) · [使用](#使用) · [配置](#配置) · [工作原理](#工作原理) · [权限与数据](#权限与数据) · [卸载](#卸载) · [已知限制](#已知限制)

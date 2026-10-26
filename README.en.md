@@ -1,5 +1,9 @@
 # dsh-unlimited-effort
 
+<p align="center">
+  <img src="assets/banner.jpg" alt="dsh-unlimited-effort — the infinity reasoning-effort switch for DeepSeek Harness" width="100%">
+</p>
+
 > A DeepSeek Harness plugin: an **∞** switch in the composer. When the session's reasoning effort is at its highest tier, it appears to the right of the model selector; one click appends a configurable "budget is unlimited" sentence to the system prompt of every later request.
 
 [中文](README.md) · [Install](#install) · [Usage](#usage) · [Configuration](#configuration) · [How it works](#how-it-works) · [Permissions and data](#permissions-and-data) · [Uninstall](#uninstall) · [Known limitations](#known-limitations)
