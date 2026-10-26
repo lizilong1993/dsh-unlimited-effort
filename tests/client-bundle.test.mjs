@@ -21,7 +21,13 @@ test('the bundle carries the inlined rank table, so a rebuild cannot drift silen
 });
 
 test('the bundle keeps the placement contract', () => {
-  assert.ok(bundle.includes("conversation.input.right"));
+  assert.ok(bundle.includes('conversation.input.right'));
   assert.ok(bundle.includes('order: 1'));
   assert.ok(bundle.includes('#924FF7'));
+});
+
+test('the bundle talks to the host per Session', () => {
+  assert.ok(bundle.includes('?sessionId='), 'the read path names the Session');
+  assert.ok(bundle.includes('sessionId: sessionId'), 'the write body names the Session');
+  assert.ok(bundle.includes('writeHostState(sessionId, false)'), 'dropping below the top tier switches off');
 });

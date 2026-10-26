@@ -1,6 +1,6 @@
 {
   "id": "dsh-external/dsh-unlimited-effort",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "./src/index.js",
   "description": "输入框 ∞ 开关：最高推理档位下点击后，向系统提示词追加一段「用量无上限」宣告。",
   "engines": {

@@ -53,8 +53,15 @@ try {
 } catch (error) {
   pluginManifest = undefined;
 }
+let pluginDescriptor;
+try {
+  pluginDescriptor = JSON.parse(fs.readFileSync(path.join(installedDir, 'dsh.plugin.json'), 'utf8'));
+} catch {
+  pluginDescriptor = undefined;
+}
 const bundlePatch = pluginManifest && pluginManifest.dsh && pluginManifest.dsh.bundle ? pluginManifest.dsh.bundle.patch : undefined;
-const clientMain = pluginManifest && pluginManifest.dsh && pluginManifest.dsh.client ? pluginManifest.dsh.client.main : undefined;
+const clientMain = (pluginDescriptor && pluginDescriptor.client ? pluginDescriptor.client.main : undefined)
+  ?? (pluginManifest && pluginManifest.dsh && pluginManifest.dsh.client ? pluginManifest.dsh.client.main : undefined);
 bundlePatch ? ok('dsh.bundle.patch 已声明', String(bundlePatch)) : bad('缺少 dsh.bundle.patch', '这样 dsh plugin add 装不上');
 clientMain ? ok('dsh.client.main 已声明', String(clientMain)) : bad('缺少 dsh.client.main', '输入框按钮不会出现');
 
@@ -82,12 +89,15 @@ if (clientSource.length === 0) {
 
 // 5. persisted switch
 const stateFile = path.join(HOME, 'unlimited-mode.json');
-let state = { enabled: false };
 try {
-  state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-  ok('开关状态文件可读', stateFile + ' -> enabled=' + String(state.enabled === true));
+  const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  const sessions = state !== null && typeof state === 'object' && state.sessions !== null && typeof state.sessions === 'object' ? state.sessions : {};
+  const on = Object.keys(sessions).filter((id) => sessions[id] === true);
+  ok('开关状态文件可读', stateFile + ' -> 已开启的会话数=' + String(on.length));
+  for (const id of on.slice(0, 5)) console.log('       已开启: ' + id);
+  if (state.enabled === true) warn('检测到 0.1.x 的旧全局状态', '升级到 0.2.0 后不会继承，所有会话默认关闭');
 } catch {
-  warn('尚无开关状态文件（默认关）', stateFile);
+  warn('尚无开关状态文件（所有会话默认关）', stateFile);
 }
 
 // 6. profile override (plain text scan: no YAML dependency)

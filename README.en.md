@@ -33,9 +33,9 @@ Manual install: copy this repository into `<profile>/node_modules/dsh-unlimited-
 2. A grey **∞** appears to the right of the model selector.
 3. Click it: it turns purple, and every later request carries the sentence at the end of its system prompt.
 4. Click again: back to grey, injection stops.
-5. Selecting anything below the top tier hides the button and stops the injection. Returning to the top tier brings the button back with the state you left it in.
+5. Selecting anything below the top tier hides the button, stops the injection, and **switches this Session's mode off**. Returning to the top tier brings the button back in its off (grey) state.
 
-The switch is **persisted globally** (`$DSH_HOME/unlimited-mode.json`), so one click covers every later session and survives a restart.
+The switch is **per Session** (`$DSH_HOME/unlimited-mode.json` keys state by session id): switching it on in one Session never affects another, and each Session keeps its own choice across restarts.
 
 ## Configuration
 
@@ -52,7 +52,7 @@ Override by id in the profile's `cordis.patch.yml` (write only what you change):
 | `enabled` | `true` | Plugin master switch; off means no button and no injection |
 | `notice` | long Chinese sentence | Injected text |
 | `activeColor` | `#924FF7` | On-state colour; the off state is always grey (`currentColor` at 45% opacity, theme-following) |
-| `topEffortIds` | `['max', 'xhigh']` | Which effort ids count as the top tier; drives both visibility and injection |
+| `topEffortIds` | `['max', 'xhigh']` | Which effort ids count as the top tier; drives visibility, injection, and the automatic switch-off when you drop below it |
 | `variableName` | `unlimited_notice` | Extra prompt variable name; must match `[a-z][a-z0-9_]*` |
 | `debug` | `false` | Writes `$DSH_HOME/unlimited-mode.log` |
 
@@ -77,7 +77,7 @@ Verifies package presence, bundle activation, the `dsh.bundle`/`dsh.client` decl
 
 ## Permissions and data
 
-- Writes only `$DSH_HOME/unlimited-mode.json` and, with `debug`, `$DSH_HOME/unlimited-mode.log`.
+- Writes only `$DSH_HOME/unlimited-mode.json` (per-Session switches, capped at 256 recorded Sessions, oldest dropped) and, with `debug`, `$DSH_HOME/unlimited-mode.log`.
 - No network calls, no uploads, no credential access, no edits to the Harness installation.
 - A corrupted state file reads as "off", so a broken file can never turn the mode on.
 
@@ -95,6 +95,7 @@ Delete `$DSH_HOME/unlimited-mode.json` to clear the leftover switch. After a res
 - `conversation.input.activity` is a `single` slot occupied by voice input, so the button cannot sit flush against the microphone; `order: 1` puts it between the two.
 - `topEffortIds` is a static set. A model that only declares `low`/`high` never shows the button — by design: no top tier, no unlimited mode.
 - Switching models mid-session re-evaluates the button against the new model's tiers.
+- Upgrading from 0.1.x: the old global `{ enabled: true }` is not inherited; every Session starts off and needs one click.
 
 ## Development
 

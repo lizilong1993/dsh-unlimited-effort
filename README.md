@@ -39,9 +39,9 @@ dsh plugin --profile desktop add dsh-unlimited-effort
 2. 模型选择器右侧会出现灰色 **∞**。
 3. 点击 → 变紫，之后每个请求的系统提示词末尾都会带上这句宣告。
 4. 再次点击 → 变回灰，立刻停止注入。
-5. 把档位切到 `Max` 以下 → 按钮消失、注入停止；切回最高档时按钮恢复，并沿用你上次的开关状态。
+5. 把档位切到 `Max` 以下 → 按钮消失、注入停止，并且**这个会话的模式会被自动关闭**；切回最高档时按钮重新出现，但处于关闭（灰色）状态。
 
-开关状态是**全局持久化**的（`$DSH_HOME/unlimited-mode.json`），所以「点一次，之后所有会话都生效」，重启 DSH 也记得。
+开关是**按会话独立**的（`$DSH_HOME/unlimited-mode.json` 里按 sessionId 记录），在 A 会话点亮不会影响 B 会话；重启 DSH 后各会话仍记得自己的选择。
 
 ## 配置
 
@@ -58,7 +58,7 @@ dsh plugin --profile desktop add dsh-unlimited-effort
 | `enabled` | `true` | 插件总开关。关掉则按钮与注入都不存在 |
 | `notice` | 长句文案 | 注入文本；示例见下 |
 | `activeColor` | `#924FF7` | 启用态颜色；未启用恒为灰色（`currentColor` + 45% 不透明度，随主题） |
-| `topEffortIds` | `['max', 'xhigh']` | 视为「最高档」的档位 id；按钮可见性与注入都只看这个集合 |
+| `topEffortIds` | `['max', 'xhigh']` | 视为「最高档」的档位 id；按钮可见性、注入判定，以及「降档即关闭」都只看这个集合 |
 | `variableName` | `unlimited_notice` | 额外注册的提示词变量名，必须匹配 `[a-z][a-z0-9_]*` |
 | `debug` | `false` | 打开后写 `$DSH_HOME/unlimited-mode.log` |
 
@@ -89,7 +89,7 @@ node tools/check.mjs
 
 ## 权限与数据
 
-- 只写两个文件：`$DSH_HOME/unlimited-mode.json`（开关状态）与可选的 `$DSH_HOME/unlimited-mode.log`（`debug` 打开时）。
+- 只写两个文件：`$DSH_HOME/unlimited-mode.json`（每个会话的开关，最多记 256 个，超出丢最旧的）与可选的 `$DSH_HOME/unlimited-mode.log`（`debug` 打开时）。
 - 不联网、不上传、不读凭据、不改 DSH 自身文件。
 - 状态文件损坏时按「关」处理，坏文件不会把模式打开。
 
@@ -107,6 +107,7 @@ dsh plugin --profile desktop remove dsh-unlimited-effort
 - 一个会话只能有一个 `conversation.input.activity` 条目（`single` slot，语音输入占用），因此按钮不能紧贴麦克风；`order: 1` 让它落在两者之间。
 - `topEffortIds` 是静态集合。若某个模型只声明了 `low`/`high`，按钮在该模型下不会出现（这是设计：没有「最高档」就没有无限模式）。
 - 同一会话里手动切换模型后，按钮会按新模型的档位重新判断。
+- 从 0.1.x 升级：旧的全局 `{ enabled: true }` 不会被继承，升级后所有会话都是关闭状态，需要在目标会话里重新点一次。
 
 ## 开发
 

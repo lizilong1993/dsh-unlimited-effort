@@ -1,8 +1,8 @@
 /**
  * Mount the real host half against a fake Cordis context. This is the closest
- * check to a live boot: it proves the section, the variable and the loopback
- * route are wired with the expected shapes, and that the notice only appears
- * under the documented conditions.
+ * check to a live boot: it proves the section, the variable, the loopback route
+ * and the auto-off waterfall are wired with the expected shapes, and that the
+ * notice only appears under the documented conditions for the right Session.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -14,21 +14,30 @@ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'unlimited-host-'));
 process.env.DSH_HOME = home;
 
 const { apply, ROUTE_STATE } = await import('../src/index.js');
-const { statePath, writeState } = await import('../src/state.js');
+const { isEnabled, readState, setEnabled, statePath } = await import('../src/state.js');
+
+const stateFile = statePath(home);
+const reset = () => fs.rmSync(stateFile, { force: true });
+const record = (sessionId, enabled) => setEnabled(stateFile, readState(stateFile), sessionId, enabled);
 
 /** A context that records every registration the plugin makes. */
 function fakeContext() {
   const sections = [];
   const variables = [];
   const routes = [];
-  const effects = [];
+  const listeners = new Map();
   const ctx = {
     sections,
     variables,
     routes,
-    effect(factory, label) {
-      const disposer = factory();
-      effects.push({ label, disposer });
+    listeners,
+    effect(factory) {
+      factory();
+      return () => {};
+    },
+    on(name, handler) {
+      if (!listeners.has(name)) listeners.set(name, []);
+      listeners.get(name).push(handler);
       return () => {};
     },
     inject(services, run) {
@@ -52,90 +61,111 @@ const callRoute = async (route, request) => {
     set statusCode(value) { status = value; },
     get statusCode() { return status; },
   };
-  await route.handler(request, response);
+  await route.handler({ url: ROUTE_STATE, ...request }, response);
   return { status, body: body.length > 0 ? JSON.parse(body) : undefined };
 };
 
-test('mount registers exactly one section, one variable and one state route', () => {
-  writeState(statePath(home), { enabled: false });
+const post = (payload) => ({
+  socket: { remoteAddress: '127.0.0.1' },
+  method: 'POST',
+  async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(payload)); },
+});
+
+test('mount registers one section, one variable, one route and one request listener', () => {
+  reset();
   const ctx = fakeContext();
   apply(ctx, {});
   assert.equal(ctx.sections.length, 1);
   assert.equal(ctx.sections[0].name, 'external:unlimited-mode');
   assert.equal(ctx.sections[0].order, 10250);
   assert.equal(ctx.sections[0].interpolate, false);
-  assert.equal(ctx.variables.length, 1);
-  assert.equal(ctx.variables[0].name, 'unlimited_notice');
-  assert.equal(ctx.routes.length, 1);
+  assert.deepEqual(ctx.variables.map((v) => v.name), ['unlimited_notice']);
   assert.equal(ctx.routes[0].kind, 'exact');
   assert.equal(ctx.routes[0].path, ROUTE_STATE);
+  assert.equal(ctx.listeners.get('agent/request').length, 1);
 });
 
-test('the notice appears only for a top effort with the switch on', () => {
-  const file = statePath(home);
-  writeState(file, { enabled: false });
+test('the notice appears only for a top effort in a Session that switched it on', () => {
+  reset();
+  record('session-a', true);
   const ctx = fakeContext();
   apply(ctx, {});
   const text = ctx.sections[0].text;
-  const max = { agent: { options: { reasoningEffort: 'max' } } };
-  const high = { agent: { options: { reasoningEffort: 'high' } } };
+  const contextFor = (effort, sessionId) => ({ agent: { id: sessionId, options: { reasoningEffort: effort } } });
 
-  assert.equal(text(max), '', 'switch off must stay silent even at max');
-  writeState(file, { enabled: true });
-  // the section reads the switch through the same file the route writes
-  const ctx2 = fakeContext();
-  apply(ctx2, {});
-  const text2 = ctx2.sections[0].text;
-  assert.match(text2(max), /unlimited/);
-  assert.equal(text2(high), '');
-  assert.equal(text2(undefined), '');
-  assert.equal(ctx2.variables[0].provider(max), text2(max));
+  assert.match(text(contextFor('max', 'session-a')), /unlimited/);
+  assert.equal(text(contextFor('high', 'session-a')), '', 'below the top tier stays silent');
+  assert.equal(text(contextFor('max', 'session-b')), '', 'another Session must not inherit the switch');
+  assert.equal(text(undefined), '');
+  assert.equal(ctx.variables[0].provider(contextFor('max', 'session-a')), text(contextFor('max', 'session-a')));
 });
 
 test('a custom topEffortIds set and notice are honoured', () => {
-  writeState(statePath(home), { enabled: true });
+  reset();
+  record('session-a', true);
   const ctx = fakeContext();
   apply(ctx, { topEffortIds: ['high'], notice: 'BUDGET IS UNLIMITED' });
   const text = ctx.sections[0].text;
-  assert.equal(text({ agent: { options: { reasoningEffort: 'max' } } }), '');
-  assert.equal(text({ agent: { options: { reasoningEffort: 'high' } } }), 'BUDGET IS UNLIMITED');
+  assert.equal(text({ agent: { id: 'session-a', options: { reasoningEffort: 'max' } } }), '');
+  assert.equal(text({ agent: { id: 'session-a', options: { reasoningEffort: 'high' } } }), 'BUDGET IS UNLIMITED');
 });
 
 test('an invalid variable name fails loud at mount', () => {
-  const ctx = fakeContext();
-  assert.throws(() => apply(ctx, { variableName: 'Not Valid' }), /invalid prompt variable name/);
+  assert.throws(() => apply(fakeContext(), { variableName: 'Not Valid' }), /invalid prompt variable name/);
 });
 
-test('the state route reads, writes and rejects non-loopback or bad bodies', async () => {
-  writeState(statePath(home), { enabled: false });
+test('the state route is per Session and rejects requests without one', async () => {
+  reset();
   const ctx = fakeContext();
   apply(ctx, {});
   const route = ctx.routes[0];
-  const loopback = { socket: { remoteAddress: '127.0.0.1' }, method: 'GET' };
 
-  const read = await callRoute(route, { ...loopback });
-  assert.equal(read.status, 200);
-  assert.equal(read.body.ok, true);
-  assert.equal(read.body.enabled, false);
-  assert.deepEqual(read.body.topEffortIds, ['max', 'xhigh']);
+  const empty = await callRoute(route, { socket: { remoteAddress: '127.0.0.1' }, method: 'GET' });
+  assert.equal(empty.status, 200);
+  assert.equal(empty.body.sessionId, null);
+  assert.equal(empty.body.enabled, false);
 
-  const write = await callRoute(route, {
-    socket: { remoteAddress: '::1' },
-    method: 'POST',
-    async *[Symbol.asyncIterator]() { yield Buffer.from('{"enabled":true}'); },
-  });
-  assert.equal(write.status, 200);
-  assert.equal(write.body.enabled, true);
-  assert.deepEqual(JSON.parse(fs.readFileSync(statePath(home), 'utf8')), { enabled: true });
+  const on = await callRoute(route, post({ sessionId: 'session-a', enabled: true }));
+  assert.equal(on.status, 200);
+  assert.equal(on.body.enabled, true);
+  assert.equal(isEnabled(readState(stateFile), 'session-a'), true);
+  assert.equal(isEnabled(readState(stateFile), 'session-b'), false);
 
+  const readA = await callRoute(route, { socket: { remoteAddress: '127.0.0.1' }, method: 'GET', url: ROUTE_STATE + '?sessionId=session-a' });
+  assert.equal(readA.body.enabled, true);
+  const readB = await callRoute(route, { socket: { remoteAddress: '127.0.0.1' }, method: 'GET', url: ROUTE_STATE + '?sessionId=session-b' });
+  assert.equal(readB.body.enabled, false);
+
+  const missing = await callRoute(route, post({ enabled: true }));
+  assert.equal(missing.status, 400);
   const remote = await callRoute(route, { socket: { remoteAddress: '10.1.2.3' }, method: 'GET' });
   assert.equal(remote.status, 403);
+});
 
-  const bad = await callRoute(route, {
-    socket: { remoteAddress: '127.0.0.1' },
-    method: 'POST',
-    async *[Symbol.asyncIterator]() { yield Buffer.from('{"enabled":"yes"}'); },
-  });
-  assert.equal(bad.status, 400);
-  assert.deepEqual(JSON.parse(fs.readFileSync(statePath(home), 'utf8')), { enabled: true }, 'a rejected body must not change state');
+test('dropping below the top tier switches that Session off on the next request', async () => {
+  reset();
+  record('session-a', true);
+  record('session-b', true);
+  const ctx = fakeContext();
+  apply(ctx, {});
+  const request = ctx.listeners.get('agent/request')[0];
+
+  const high = await request({ agent: { id: 'session-a' } }, () => Promise.resolve({ provider: 'p', model: 'm', reasoningEffort: 'high' }));
+  assert.equal(high.reasoningEffort, 'high', 'the request config is returned untouched');
+  assert.equal(isEnabled(readState(stateFile), 'session-a'), false, 'this Session is switched off');
+  assert.equal(isEnabled(readState(stateFile), 'session-b'), true, 'other Sessions are untouched');
+
+  record('session-a', true);
+  await request({ agent: { id: 'session-a' } }, () => Promise.resolve({ provider: 'p', model: 'm', reasoningEffort: 'max' }));
+  assert.equal(isEnabled(readState(stateFile), 'session-a'), true, 'a top effort keeps it on');
+});
+
+test('the auto-off listener never breaks a request', async () => {
+  reset();
+  record('session-a', true);
+  const ctx = fakeContext();
+  apply(ctx, {});
+  const request = ctx.listeners.get('agent/request')[0];
+  const returned = await request(undefined, () => Promise.resolve({ provider: 'p', model: 'm' }));
+  assert.equal(returned.provider, 'p');
 });

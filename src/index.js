@@ -1,23 +1,21 @@
 /**
  * dsh-unlimited-effort — host half.
  *
- * Two jobs:
- *  - keep one persisted switch (`$DSH_HOME/unlimited-mode.json`) that the
- *    composer infinity button flips over the loopback state route;
- *  - contribute one system-prompt section (and one reusable variable) whose
- *    text appears only while that switch is on AND the effort in force is one
- *    of the configured top ids.
- *
- * The section is registered once at mount and renders empty otherwise: an
- * empty section is dropped at render time, so switching the mode off needs no
- * registry churn. Prompt contributions must never throw — assembly is a
- * synchronous, fail-closed pass.
+ * Three jobs:
+ *  - keep one persisted switch per Session (`$DSH_HOME/unlimited-mode.json`)
+ *    that the composer infinity button flips over the loopback state route;
+ *  - contribute one system-prompt section (plus a reusable variable) whose text
+ *    appears only while that Session's switch is on AND its effort is one of
+ *    the configured top ids;
+ *  - clear a Session's switch as soon as it drops below the top effort, so
+ *    returning to the top tier starts from off instead of resuming silently.
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { makeGate } from './gate.js';
+import { makeGate, sessionIdOf } from './gate.js';
 import { MAX_BODY, isLoopback, readJson, sendJson } from './route.js';
-import { dshHome, readState, statePath, writeState } from './state.js';
+import { dshHome, isEnabled, readState, setEnabled, statePath } from './state.js';
+import { isTopEffort } from './shared/decide.js';
 
 /** Cordis plugin name. */
 export const name = 'unlimited-mode';
@@ -71,8 +69,18 @@ export function apply(ctx, config) {
     }
   };
 
-  const gate = makeGate(cfg, () => state.enabled);
+  const switchOn = (sessionId) => isEnabled(state, sessionId);
+  const gate = makeGate(cfg, switchOn);
   const text = (context) => (gate(context) ? cfg.notice : '');
+  const payload = (sessionId) => ({
+    ok: true,
+    sessionId: sessionId === undefined ? null : sessionId,
+    enabled: switchOn(sessionId),
+    pluginEnabled: cfg.enabled === true,
+    topEffortIds: Array.isArray(cfg.topEffortIds) ? [...cfg.topEffortIds] : [],
+    notice: String(cfg.notice),
+    activeColor: String(cfg.activeColor),
+  });
 
   ctx.effect(() => ctx.systemPrompt.section({
     name: SECTION_NAME,
@@ -82,6 +90,21 @@ export function apply(ctx, config) {
   }), 'unlimited-mode: section');
 
   ctx.effect(() => ctx.systemPrompt.variable(variableName, text), 'unlimited-mode: variable');
+
+  ctx.on('agent/request', async (request, next) => {
+    const config2 = await next();
+    try {
+      if (cfg.enabled !== true) return config2;
+      const sessionId = sessionIdOf({ agent: request === undefined ? undefined : request.agent });
+      if (sessionId === undefined || !switchOn(sessionId)) return config2;
+      if (isTopEffort(config2 === undefined ? undefined : config2.reasoningEffort, cfg.topEffortIds)) return config2;
+      state = setEnabled(file, state, sessionId, false);
+      log('auto-off ' + sessionId + ' (effort ' + String(config2 === undefined ? undefined : config2.reasoningEffort) + ')');
+    } catch (error) {
+      log('auto-off failed: ' + String(error));
+    }
+    return config2;
+  });
 
   ctx.inject(['webServer'], (webCtx) => {
     const server = webCtx.webServer;
@@ -98,14 +121,8 @@ export function apply(ctx, config) {
           return;
         }
         if (req.method === 'GET') {
-          sendJson(res, 200, {
-            ok: true,
-            enabled: state.enabled,
-            pluginEnabled: cfg.enabled === true,
-            topEffortIds: Array.isArray(cfg.topEffortIds) ? [...cfg.topEffortIds] : [],
-            notice: String(cfg.notice),
-            activeColor: String(cfg.activeColor),
-          });
+          const requested = new URL(req.url, 'http://127.0.0.1').searchParams.get('sessionId');
+          sendJson(res, 200, payload(requested === null ? undefined : requested));
           return;
         }
         if (req.method !== 'POST') {
@@ -113,28 +130,21 @@ export function apply(ctx, config) {
           return;
         }
         const body = await readJson(req);
-        if (body === undefined || typeof body.enabled !== 'boolean') {
-          sendJson(res, 400, { ok: false, error: 'enabled must be a boolean (body limit ' + String(MAX_BODY) + ' bytes)' });
+        if (body === undefined || typeof body.enabled !== 'boolean' || typeof body.sessionId !== 'string' || body.sessionId.length === 0) {
+          sendJson(res, 400, { ok: false, error: 'sessionId (string) and enabled (boolean) are required (body limit ' + String(MAX_BODY) + ' bytes)' });
           return;
         }
         try {
-          state = writeState(file, { enabled: body.enabled });
-          log('switch ' + (state.enabled ? 'on' : 'off'));
-          sendJson(res, 200, {
-            ok: true,
-            enabled: state.enabled,
-            pluginEnabled: cfg.enabled === true,
-            topEffortIds: Array.isArray(cfg.topEffortIds) ? [...cfg.topEffortIds] : [],
-            notice: String(cfg.notice),
-            activeColor: String(cfg.activeColor),
-          });
+          state = setEnabled(file, state, body.sessionId, body.enabled);
+          log('switch ' + (body.enabled === true ? 'on' : 'off') + ' for ' + body.sessionId);
+          sendJson(res, 200, payload(body.sessionId));
         } catch (error) {
           log('state write failed: ' + String(error));
-          sendJson(res, 500, { ok: false, enabled: state.enabled, error: 'state write failed' });
+          sendJson(res, 500, { ok: false, error: 'state write failed' });
         }
       },
     }), 'unlimited-mode: state route');
   });
 
-  log('mounted (switch ' + (state.enabled ? 'on' : 'off') + ', section order ' + String(SECTION_ORDER) + ')');
+  log('mounted (recorded Sessions: ' + String(Object.keys(state.sessions).length) + ')');
 }
