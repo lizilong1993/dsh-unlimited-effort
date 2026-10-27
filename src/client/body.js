@@ -8,6 +8,10 @@
  * it to the RIGHT of the model selector while staying in normal flow (no
  * absolute positioning, so it reflows with the row at any width).
  *
+ * The control is the capsule from the project banner: a rounded track with the
+ * infinity glyph and a white knob that swaps sides, filled with the configured
+ * accent colour when on and a neutral grey when off.
+ *
  * The switch is per Session: the button asks the Host for the current Session's
  * own state and writes back only that Session. Dropping below the top effort
  * switches the mode off — here immediately, without waiting for a request, and
@@ -149,7 +153,8 @@ function ModeButton(props) {
 
   return React.createElement('button', {
     type: 'button',
-    'aria-pressed': on,
+    role: 'switch',
+    'aria-checked': on,
     'aria-label': labelFor(on),
     title: labelFor(on),
     onClick: toggle,
@@ -158,20 +163,46 @@ function ModeButton(props) {
       flex: 'none',
       display: 'inline-flex',
       alignItems: 'center',
-      justifyContent: 'center',
-      background: 'transparent',
-      border: '0',
+      justifyContent: 'space-between',
+      boxSizing: 'border-box',
+      width: '52px',
+      height: '26px',
       padding: '0 4px',
       margin: '0',
-      lineHeight: '1',
-      fontSize: '15px',
-      fontWeight: '600',
+      border: '0',
+      borderRadius: '999px',
       cursor: 'pointer',
-      color: on ? String(host.activeColor || FALLBACK_ACTIVE_COLOR) : 'currentColor',
-      opacity: on ? '1' : '0.45',
-      transition: 'color .15s ease, opacity .15s ease',
+      background: on ? String(host.activeColor || FALLBACK_ACTIVE_COLOR) : 'rgba(148, 163, 184, 0.45)',
+      boxShadow: on ? '0 1px 3px rgba(0, 0, 0, 0.18)' : 'inset 0 0 0 1px rgba(148, 163, 184, 0.35)',
+      transition: 'background .18s ease, box-shadow .18s ease',
     },
-  }, '∞');
+  }, [
+    React.createElement('span', {
+      key: 'knob',
+      style: {
+        order: on ? 2 : 0,
+        flex: 'none',
+        width: '18px',
+        height: '18px',
+        borderRadius: '50%',
+        background: '#ffffff',
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.28)',
+        transition: 'order .18s ease',
+      },
+    }),
+    React.createElement('span', {
+      key: 'glyph',
+      style: {
+        order: on ? 0 : 2,
+        flex: 'none',
+        lineHeight: '1',
+        fontSize: '14px',
+        fontWeight: '600',
+        color: on ? '#ffffff' : 'rgba(71, 85, 105, 0.9)',
+        transition: 'color .18s ease',
+      },
+    }, '\u221E'),
+  ]);
 }
 
 exports.name = 'unlimited-mode';

@@ -12,7 +12,7 @@
 
 - It does exactly two things: registers one ∞ button in the composer, and — while you have switched it on — appends one configurable sentence to the system prompt.
 - The button only exists at the **top** effort tier (default `max`, then `xhigh`; configurable). Drop below it and the button hides and the injection stops.
-- The button has **no background and only the ∞ glyph**: grey means off, purple (default `#924FF7`) means on.
+- The button is a **capsule switch**: a rounded track with a white knob, the ∞ glyph and the knob trading ends as the state flips; neutral grey when off, filled with the accent colour (default `#924FF7`) when on.
 - It does not touch models, effort tiers, providers, or your configuration file. Remove the plugin and everything is native again.
 
 ## Install
@@ -51,7 +51,7 @@ Override by id in the profile's `cordis.patch.yml` (write only what you change):
 |---|---|---|
 | `enabled` | `true` | Plugin master switch; off means no button and no injection |
 | `notice` | long Chinese sentence | Injected text |
-| `activeColor` | `#924FF7` | On-state colour; the off state is always grey (`currentColor` at 45% opacity, theme-following) |
+| `activeColor` | `#924FF7` | Fill colour of the capsule when on; the off state is always neutral grey |
 | `topEffortIds` | `['max', 'xhigh']` | Which effort ids count as the top tier; drives visibility, injection, and the automatic switch-off when you drop below it |
 | `variableName` | `unlimited_notice` | Extra prompt variable name; must match `[a-z][a-z0-9_]*` |
 | `debug` | `false` | Writes `$DSH_HOME/unlimited-mode.log` |
