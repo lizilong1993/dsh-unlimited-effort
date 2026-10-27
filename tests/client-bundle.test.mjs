@@ -34,7 +34,7 @@ test('the bundle talks to the host per Session', () => {
 
 test('the switch is drawn as exact SVG geometry', () => {
   for (const needle of [
-    'var TRACK_WIDTH = 50;',
+    'var TRACK_WIDTH = 46;',
     'var TRACK_HEIGHT = 20;',
     'var INSET = 2;',
     'var TRACK_RADIUS = TRACK_HEIGHT / 2;',
@@ -46,6 +46,7 @@ test('the switch is drawn as exact SVG geometry', () => {
   assert.ok(bundle.includes("rx: String(TRACK_RADIUS)"), 'the track ends are semicircles by construction');
   assert.ok(bundle.includes("r: String(KNOB_RADIUS)"), 'the knob is an SVG circle');
   assert.ok(bundle.includes("viewBox: '0 0 ' + String(TRACK_WIDTH)"), 'one viewBox owns the geometry');
+  assert.ok(bundle.includes('var GLYPH_CX_ON = (INSET + (KNOB_CX_ON - KNOB_RADIUS)) / 2;'), 'the glyph centres in its free span');
   assert.ok(!bundle.includes("borderRadius: '50%'"), 'no CSS circle can be reinterpreted as a squircle');
 });
 
