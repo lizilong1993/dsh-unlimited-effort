@@ -1,6 +1,6 @@
 {
   "name": "dsh-unlimited-effort",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Composer infinity toggle: while the highest reasoning effort is selected, one click adds an unlimited-token-budget notice to the system prompt.",
   "type": "module",
   "license": "MIT",

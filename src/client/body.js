@@ -29,10 +29,12 @@ var FALLBACK_ACTIVE_COLOR = '#924FF7';
 // 0.85 of the track height and sits 0.07 of it away from every edge.
 var TRACK_WIDTH = 50;
 var TRACK_HEIGHT = 20;
-var KNOB_SIZE = 17;
-var INSET = 1.5;
+var INSET = 2;                       // clearance on every edge, 0.10 of the height
+var KNOB_SIZE = TRACK_HEIGHT - INSET * 2;  // 16, so 0.80 of the height like the art
+var TRACK_RADIUS = TRACK_HEIGHT / 2;       // a true semicircular end, not a guessed pill
 var GLYPH_SIZE = 13;
 var GLYPH_PADDING = 3;
+var INNER_HEIGHT = TRACK_HEIGHT - INSET * 2;
 
 /**
  * Localised switch label. Kept local instead of wired to the locale service so
@@ -179,10 +181,13 @@ function ModeButton(props) {
       padding: String(INSET) + 'px',
       margin: '0',
       border: '0',
-      borderRadius: '999px',
+      borderRadius: String(TRACK_RADIUS) + 'px',
       cursor: 'pointer',
       userSelect: 'none',
       WebkitTapHighlightColor: 'transparent',
+      appearance: 'none',
+      WebkitAppearance: 'none',
+      outlineOffset: '2px',
       background: on ? String(host.activeColor || FALLBACK_ACTIVE_COLOR) : 'rgba(148, 163, 184, 0.45)',
       backgroundImage: on
         ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.05))'
@@ -198,6 +203,8 @@ function ModeButton(props) {
       style: {
         order: on ? 2 : 0,
         flex: 'none',
+        display: 'block',
+        boxSizing: 'border-box',
         width: String(KNOB_SIZE) + 'px',
         height: String(KNOB_SIZE) + 'px',
         borderRadius: '50%',
@@ -214,6 +221,8 @@ function ModeButton(props) {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
+        boxSizing: 'border-box',
+        height: String(INNER_HEIGHT) + 'px',
         padding: '0 ' + String(GLYPH_PADDING) + 'px',
         lineHeight: '1',
         fontSize: String(GLYPH_SIZE) + 'px',
