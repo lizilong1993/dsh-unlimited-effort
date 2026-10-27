@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { EFFORT_RANK, effortIds, isTopEffort, strongestEffort } from '../src/shared/decide.js';
+import { EFFORT_RANK, effortIds, isTopEffort, shouldAutoOff, strongestEffort } from '../src/shared/decide.js';
 
 test('EFFORT_RANK orders the known adapter levels', () => {
   assert.ok(EFFORT_RANK.max > EFFORT_RANK.xhigh);
@@ -32,4 +32,22 @@ test('isTopEffort is strict about the configured set', () => {
   assert.equal(isTopEffort(undefined, ['max']), false);
   assert.equal(isTopEffort('max', []), false);
   assert.equal(isTopEffort('max', undefined), false);
+});
+
+test('a known effort below the top tier switches an active switch off', () => {
+  const top = ['max', 'xhigh'];
+  assert.equal(shouldAutoOff(true, 'high', top), true);
+  assert.equal(shouldAutoOff(true, 'low', top), true);
+  assert.equal(shouldAutoOff(true, 'max', top), false);
+  assert.equal(shouldAutoOff(true, 'xhigh', top), false);
+});
+
+test('an unknown effort is not "below the top tier"', () => {
+  assert.equal(shouldAutoOff(true, undefined, ['max']), false);
+  assert.equal(shouldAutoOff(true, '', ['max']), false);
+});
+
+test('an already-off switch is never switched off again', () => {
+  assert.equal(shouldAutoOff(false, 'high', ['max']), false);
+  assert.equal(shouldAutoOff(undefined, 'high', ['max']), false);
 });

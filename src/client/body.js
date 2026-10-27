@@ -10,8 +10,9 @@
  *
  * The switch is per Session: the button asks the Host for the current Session's
  * own state and writes back only that Session. Dropping below the top effort
- * switches the mode off — on the Host through the next request, and here
- * immediately, without waiting for one.
+ * switches the mode off — here immediately, without waiting for a request, and
+ * on the Host through the next request for Sessions with no composer attached.
+ * Nothing ever switches it back on except a click.
  */
 
 /** Loopback route owned by the host half. */
@@ -95,7 +96,7 @@ function ModeButton(props) {
       .then(function (payload) { if (alive && payload) setHost(payload); })
       .catch(function () { /* unreachable host: stay hidden */ });
     return function () { alive = false; };
-  }, [sessionId, effort]);
+  }, [sessionId]);
 
   React.useEffect(function () {
     if (!models || typeof models.directoryFor !== 'function' || !sessionId) return undefined;
@@ -123,10 +124,10 @@ function ModeButton(props) {
   // Session only. An unknown effort is not "below the top tier" — it is "not
   // known yet" — so the guard requires a concrete id before acting.
   React.useEffect(function () {
-    if (!host || !sessionId || host.enabled !== true) return;
-    if (typeof effort !== 'string' || effort.length === 0) return;
-    if (isTopEffort(effort, host.topEffortIds)) return;
-    writeHostState(sessionId, false).then(setHost).catch(function () { /* the host clears it on the next request anyway */ });
+    if (!host || !sessionId) return;
+    if (!shouldAutoOff(host.enabled, effort, host.topEffortIds)) return;
+    setHost(function (previous) { return previous ? Object.assign({}, previous, { enabled: false }) : previous; });
+    writeHostState(sessionId, false).catch(function () { /* the host clears it on the next request anyway */ });
   }, [effort, host, sessionId]);
 
   if (!host || host.pluginEnabled !== true) return null;

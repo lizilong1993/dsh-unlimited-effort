@@ -66,3 +66,21 @@ export function isTopEffort(current, topIds) {
   if (!Array.isArray(topIds) || topIds.length === 0) return false;
   return topIds.includes(current);
 }
+
+/**
+ * Whether a switch that is on must be switched off because the Session left
+ * the top tier.
+ *
+ * An unknown effort is "not known yet", not "below the top tier": a Session
+ * that has not resolved its selection must never be switched off by this rule,
+ * or the first render would silently clear a legitimate choice.
+ * @param enabled - the switch state this Session currently has.
+ * @param current - the effort id in force, when known.
+ * @param topIds - configured ids that count as the top tier.
+ * @returns true only when the switch is on and a known effort is below the top.
+ */
+export function shouldAutoOff(enabled, current, topIds) {
+  if (enabled !== true) return false;
+  if (typeof current !== 'string' || current.length === 0) return false;
+  return !isTopEffort(current, topIds);
+}
