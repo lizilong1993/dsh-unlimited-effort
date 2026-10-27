@@ -13,7 +13,7 @@
 - It does exactly two things: registers one ∞ button in the composer, and — while you have switched it on — appends one configurable sentence to the system prompt.
 - The button only exists at the **top** effort tier (default `max`, then `xhigh`; configurable). Drop below it and the button hides and the injection stops.
 - The button is a **capsule switch**: a rounded track with a white knob, the ∞ glyph and the knob trading ends as the state flips; neutral grey with an inner stroke when off, filled with the accent colour (default `#924FF7`) and a soft shadow when on.
-- Capsule metrics follow the banner: 50x20 track, 17px knob, 1.5px inset (2.5:1 track, knob at 0.85 of the height).
+- The capsule is one inline SVG: a 50x20 track whose corner radius is half its height (true semicircular ends), a 16px circular knob, and 2px of clearance on every edge; the infinity mark is two stroked circles that trade ends with the knob. SVG keeps the geometry exact where CSS radii were being reshaped.
 - It does not touch models, effort tiers, providers, or your configuration file. Remove the plugin and everything is native again.
 
 ## Install

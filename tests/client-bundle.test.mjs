@@ -32,21 +32,25 @@ test('the bundle talks to the host per Session', () => {
   assert.ok(bundle.includes('writeHostState(sessionId, false)'), 'dropping below the top tier switches off');
 });
 
-test('the capsule keeps the metrics measured from the reference art', () => {
-  // 2.5:1 track, knob at 0.85 of the height, inset at 0.07 — see README.
+test('the switch is drawn as exact SVG geometry', () => {
   for (const needle of [
     'var TRACK_WIDTH = 50;',
     'var TRACK_HEIGHT = 20;',
     'var INSET = 2;',
-    'var KNOB_SIZE = TRACK_HEIGHT - INSET * 2;',
     'var TRACK_RADIUS = TRACK_HEIGHT / 2;',
-    'var GLYPH_SIZE = 13;',
+    'var KNOB_RADIUS = (TRACK_HEIGHT - INSET * 2) / 2;',
   ]) {
     assert.ok(bundle.includes(needle), needle);
   }
-  assert.ok(bundle.includes('borderRadius: String(TRACK_RADIUS)'), 'the end radius is half the height, so the ends are semicircles');
-  assert.ok(bundle.includes("borderRadius: '50%'"), 'the knob is a circle, not a rounded square');
-  assert.ok(bundle.includes("appearance: 'none'"), 'no UA button chrome can override the radius');
-  assert.ok(bundle.includes("justifyContent: 'space-between'"), 'glyph and knob sit at opposite ends');
-  assert.ok(bundle.includes("boxSizing: 'border-box'"), 'padding cannot grow the track');
+  // a rect whose rx is half its height, and a real circle for the knob
+  assert.ok(bundle.includes("rx: String(TRACK_RADIUS)"), 'the track ends are semicircles by construction');
+  assert.ok(bundle.includes("r: String(KNOB_RADIUS)"), 'the knob is an SVG circle');
+  assert.ok(bundle.includes("viewBox: '0 0 ' + String(TRACK_WIDTH)"), 'one viewBox owns the geometry');
+  assert.ok(!bundle.includes("borderRadius: '50%'"), 'no CSS circle can be reinterpreted as a squircle');
+});
+
+test('placement stays in normal flow', () => {
+  assert.ok(bundle.includes('conversation.input.right'));
+  assert.ok(bundle.includes('order: 1'));
+  assert.ok(!bundle.includes('position: \'absolute\''), 'the button is never absolutely positioned');
 });

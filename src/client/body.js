@@ -8,6 +8,10 @@
  * it to the RIGHT of the model selector while staying in normal flow (no
  * absolute positioning, so it reflows with the row at any width).
  *
+ * The track, the knob and the glyph are one inline SVG: CSS corner radii and
+ * percentage radii were not surviving this environment intact, and SVG circles
+ * and rounded rects are exact by construction.
+ *
  * The control is the capsule from the project banner: a rounded track with the
  * infinity glyph and a white knob that swaps sides, filled with the configured
  * accent colour when on and a neutral grey when off.
@@ -27,14 +31,21 @@ var FALLBACK_ACTIVE_COLOR = '#924FF7';
 
 // Capsule metrics, derived from the reference art: a 2.5:1 track whose knob is
 // 0.85 of the track height and sits 0.07 of it away from every edge.
+// Drawn as SVG so the geometry cannot be reinterpreted by the box model: the
+// track is a rect whose corner radius is exactly half its height (a true
+// semicircular end) and the knob is a circle, not a rounded box.
 var TRACK_WIDTH = 50;
 var TRACK_HEIGHT = 20;
-var INSET = 2;                       // clearance on every edge, 0.10 of the height
-var KNOB_SIZE = TRACK_HEIGHT - INSET * 2;  // 16, so 0.80 of the height like the art
-var TRACK_RADIUS = TRACK_HEIGHT / 2;       // a true semicircular end, not a guessed pill
-var GLYPH_SIZE = 13;
-var GLYPH_PADDING = 3;
-var INNER_HEIGHT = TRACK_HEIGHT - INSET * 2;
+var INSET = 2;
+var TRACK_RADIUS = TRACK_HEIGHT / 2;                    // 10 -> perfect pill
+var KNOB_RADIUS = (TRACK_HEIGHT - INSET * 2) / 2;       // 8  -> 16px circle
+var KNOB_CX_ON = TRACK_WIDTH - INSET - KNOB_RADIUS;     // 40
+var KNOB_CX_OFF = INSET + KNOB_RADIUS;                  // 10
+var GLYPH_CX_ON = 16;
+var GLYPH_CX_OFF = TRACK_WIDTH - 16;
+var GLYPH_RADIUS = 3.1;
+var GLYPH_SPREAD = 3.4;
+var GLYPH_STROKE = 1.7;
 
 /**
  * Localised switch label. Kept local instead of wired to the locale service so
@@ -162,6 +173,11 @@ function ModeButton(props) {
       .then(function () { setBusy(false); });
   };
 
+  var trackFill = on ? String(host.activeColor || FALLBACK_ACTIVE_COLOR) : '#cfd6df';
+  var glyphColor = on ? '#ffffff' : '#475569';
+  var knobCx = on ? KNOB_CX_ON : KNOB_CX_OFF;
+  var glyphCx = on ? GLYPH_CX_ON : GLYPH_CX_OFF;
+
   return React.createElement('button', {
     type: 'button',
     role: 'switch',
@@ -174,64 +190,60 @@ function ModeButton(props) {
       flex: 'none',
       display: 'inline-flex',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      boxSizing: 'border-box',
+      justifyContent: 'center',
       width: String(TRACK_WIDTH) + 'px',
       height: String(TRACK_HEIGHT) + 'px',
-      padding: String(INSET) + 'px',
+      padding: '0',
       margin: '0',
       border: '0',
-      borderRadius: String(TRACK_RADIUS) + 'px',
+      background: 'transparent',
       cursor: 'pointer',
       userSelect: 'none',
       WebkitTapHighlightColor: 'transparent',
       appearance: 'none',
       WebkitAppearance: 'none',
-      outlineOffset: '2px',
-      background: on ? String(host.activeColor || FALLBACK_ACTIVE_COLOR) : 'rgba(148, 163, 184, 0.45)',
-      backgroundImage: on
-        ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.05))'
-        : 'none',
-      boxShadow: on
-        ? '0 1px 2px rgba(0, 0, 0, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.16)'
-        : 'inset 0 0 0 1px rgba(148, 163, 184, 0.45)',
-      transition: 'background .18s ease, box-shadow .18s ease',
+      lineHeight: '0',
     },
+  }, React.createElement('svg', {
+    width: String(TRACK_WIDTH),
+    height: String(TRACK_HEIGHT),
+    viewBox: '0 0 ' + String(TRACK_WIDTH) + ' ' + String(TRACK_HEIGHT),
+    'aria-hidden': 'true',
+    focusable: 'false',
+    style: { display: 'block', overflow: 'visible' },
   }, [
-    React.createElement('span', {
-      key: 'knob',
-      style: {
-        order: on ? 2 : 0,
-        flex: 'none',
-        display: 'block',
-        boxSizing: 'border-box',
-        width: String(KNOB_SIZE) + 'px',
-        height: String(KNOB_SIZE) + 'px',
-        borderRadius: '50%',
-        background: '#ffffff',
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.26)',
-        transition: 'order .18s ease',
-      },
+    React.createElement('rect', {
+      key: 'track',
+      x: '0',
+      y: '0',
+      width: String(TRACK_WIDTH),
+      height: String(TRACK_HEIGHT),
+      rx: String(TRACK_RADIUS),
+      ry: String(TRACK_RADIUS),
+      fill: trackFill,
+      stroke: on ? 'rgba(255, 255, 255, 0.22)' : 'rgba(148, 163, 184, 0.55)',
+      strokeWidth: '1',
     }),
-    React.createElement('span', {
+    React.createElement('g', {
       key: 'glyph',
-      style: {
-        order: on ? 0 : 2,
-        flex: 'none',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxSizing: 'border-box',
-        height: String(INNER_HEIGHT) + 'px',
-        padding: '0 ' + String(GLYPH_PADDING) + 'px',
-        lineHeight: '1',
-        fontSize: String(GLYPH_SIZE) + 'px',
-        fontWeight: '600',
-        color: on ? '#ffffff' : 'rgba(71, 85, 105, 0.9)',
-        transition: 'color .18s ease',
-      },
-    }, '\u221E'),
-  ]);
+      fill: 'none',
+      stroke: glyphColor,
+      strokeWidth: String(GLYPH_STROKE),
+      strokeLinecap: 'round',
+      style: { transition: 'stroke .18s ease' },
+    }, [
+      React.createElement('circle', { key: 'l', cx: String(glyphCx - GLYPH_SPREAD), cy: String(TRACK_HEIGHT / 2), r: String(GLYPH_RADIUS) }),
+      React.createElement('circle', { key: 'r', cx: String(glyphCx + GLYPH_SPREAD), cy: String(TRACK_HEIGHT / 2), r: String(GLYPH_RADIUS) }),
+    ]),
+    React.createElement('circle', {
+      key: 'knob',
+      cx: String(knobCx),
+      cy: String(TRACK_HEIGHT / 2),
+      r: String(KNOB_RADIUS),
+      fill: '#ffffff',
+      style: { transition: 'cx .18s ease' },
+    }),
+  ]));
 }
 
 exports.name = 'unlimited-mode';
