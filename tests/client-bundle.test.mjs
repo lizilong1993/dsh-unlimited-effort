@@ -31,3 +31,13 @@ test('the bundle talks to the host per Session', () => {
   assert.ok(bundle.includes('sessionId: sessionId'), 'the write body names the Session');
   assert.ok(bundle.includes('writeHostState(sessionId, false)'), 'dropping below the top tier switches off');
 });
+
+test('the capsule keeps the metrics measured from the reference art', () => {
+  // 2.5:1 track, knob at 0.85 of the height, inset at 0.07 — see README.
+  for (const needle of ['var TRACK_WIDTH = 50;', 'var TRACK_HEIGHT = 20;', 'var KNOB_SIZE = 17;', 'var INSET = 1.5;', 'var GLYPH_SIZE = 13;']) {
+    assert.ok(bundle.includes(needle), needle);
+  }
+  assert.ok(bundle.includes("borderRadius: '999px'"), 'pill radius');
+  assert.ok(bundle.includes("justifyContent: 'space-between'"), 'glyph and knob sit at opposite ends');
+  assert.ok(bundle.includes("boxSizing: 'border-box'"), 'padding cannot grow the track');
+});

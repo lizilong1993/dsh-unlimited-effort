@@ -12,7 +12,8 @@
 
 - It does exactly two things: registers one ∞ button in the composer, and — while you have switched it on — appends one configurable sentence to the system prompt.
 - The button only exists at the **top** effort tier (default `max`, then `xhigh`; configurable). Drop below it and the button hides and the injection stops.
-- The button is a **capsule switch**: a rounded track with a white knob, the ∞ glyph and the knob trading ends as the state flips; neutral grey when off, filled with the accent colour (default `#924FF7`) when on.
+- The button is a **capsule switch**: a rounded track with a white knob, the ∞ glyph and the knob trading ends as the state flips; neutral grey with an inner stroke when off, filled with the accent colour (default `#924FF7`) and a soft shadow when on.
+- Capsule metrics follow the banner: 50x20 track, 17px knob, 1.5px inset (2.5:1 track, knob at 0.85 of the height).
 - It does not touch models, effort tiers, providers, or your configuration file. Remove the plugin and everything is native again.
 
 ## Install

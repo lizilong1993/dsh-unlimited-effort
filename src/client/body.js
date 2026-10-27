@@ -25,6 +25,15 @@ var ROUTE_STATE = '/unlimited-mode/state';
 /** Fallback tint when the host did not send one. */
 var FALLBACK_ACTIVE_COLOR = '#924FF7';
 
+// Capsule metrics, derived from the reference art: a 2.5:1 track whose knob is
+// 0.85 of the track height and sits 0.07 of it away from every edge.
+var TRACK_WIDTH = 50;
+var TRACK_HEIGHT = 20;
+var KNOB_SIZE = 17;
+var INSET = 1.5;
+var GLYPH_SIZE = 13;
+var GLYPH_PADDING = 3;
+
 /**
  * Localised switch label. Kept local instead of wired to the locale service so
  * the button still renders when that service is absent.
@@ -165,15 +174,22 @@ function ModeButton(props) {
       alignItems: 'center',
       justifyContent: 'space-between',
       boxSizing: 'border-box',
-      width: '52px',
-      height: '26px',
-      padding: '0 4px',
+      width: String(TRACK_WIDTH) + 'px',
+      height: String(TRACK_HEIGHT) + 'px',
+      padding: String(INSET) + 'px',
       margin: '0',
       border: '0',
       borderRadius: '999px',
       cursor: 'pointer',
+      userSelect: 'none',
+      WebkitTapHighlightColor: 'transparent',
       background: on ? String(host.activeColor || FALLBACK_ACTIVE_COLOR) : 'rgba(148, 163, 184, 0.45)',
-      boxShadow: on ? '0 1px 3px rgba(0, 0, 0, 0.18)' : 'inset 0 0 0 1px rgba(148, 163, 184, 0.35)',
+      backgroundImage: on
+        ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.05))'
+        : 'none',
+      boxShadow: on
+        ? '0 1px 2px rgba(0, 0, 0, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.16)'
+        : 'inset 0 0 0 1px rgba(148, 163, 184, 0.45)',
       transition: 'background .18s ease, box-shadow .18s ease',
     },
   }, [
@@ -182,11 +198,11 @@ function ModeButton(props) {
       style: {
         order: on ? 2 : 0,
         flex: 'none',
-        width: '18px',
-        height: '18px',
+        width: String(KNOB_SIZE) + 'px',
+        height: String(KNOB_SIZE) + 'px',
         borderRadius: '50%',
         background: '#ffffff',
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.28)',
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.26)',
         transition: 'order .18s ease',
       },
     }),
@@ -195,8 +211,12 @@ function ModeButton(props) {
       style: {
         order: on ? 0 : 2,
         flex: 'none',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0 ' + String(GLYPH_PADDING) + 'px',
         lineHeight: '1',
-        fontSize: '14px',
+        fontSize: String(GLYPH_SIZE) + 'px',
         fontWeight: '600',
         color: on ? '#ffffff' : 'rgba(71, 85, 105, 0.9)',
         transition: 'color .18s ease',
